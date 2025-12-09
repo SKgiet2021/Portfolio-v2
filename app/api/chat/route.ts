@@ -1,57 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
-import {
-  findRelevantChunks,
-} from '@/lib/rag-simple';
+import { findRelevantChunks } from '@/lib/rag-simple';
 import { streamLiveReply } from '@/lib/geminiLive';
-import portfolioData from '@/data/portfolio.json';
-
-// Initialize Gemini AI
-let ai: GoogleGenAI | null = null;
-
-function getAI() {
-  if (!ai) {
-    // API key is read from GEMINI_API_KEY environment variable by default
-    ai = new GoogleGenAI({
-      apiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
-    });
-  }
-  return ai;
-}
+import { buildPersonaPrompt } from '@/lib/persona';
+import { search } from '@/lib/lance-store';
+import { embed } from '@/lib/embeddings';
+import { validateAndProcess } from '@/lib/guardrails';
 
 export async function POST(req: NextRequest) {
   try {
     const { message, messages } = await req.json();
 
-    // Support both single message (legacy) and messages array (chat history)
-    // If 'messages' is provided, use it. If only 'message', treat as single turn.
+    // Support both single message and messages array (chat history)
     let history: { role: "user" | "model"; content: string }[] = [];
     
     if (messages && Array.isArray(messages)) {
-        history = messages.map((m: any) => ({
-            role: m.role === "assistant" ? "model" : m.role,
-            content: m.content
-        }));
+      history = messages.map((m: any) => ({
+        role: m.role === "assistant" ? "model" : m.role,
+        content: m.content
+      }));
     } else if (message) {
-        history = [{ role: "user", content: message }];
+      history = [{ role: "user", content: message }];
     } else {
-        return NextResponse.json({ error: "Message is required" }, { status: 400 });
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
     // Extract the latest user message for RAG context
     const latestUserMsg = history[history.length - 1].content;
 
-    // Find relevant context using simplified RAG (keyword matching)
-    const relevantChunks = findRelevantChunks(latestUserMsg, 3);
-    const ragContext = relevantChunks
-      .map((chunk, idx) => `[${idx + 1}] ${chunk.text}`)
-      .join('\n\n');
-
-    const personaPrompt = `You are a helpful assistant answering questions about the user's portfolio.
+    // ========================================
+    // LAYER 1: GUARDRAILS - Pre-processing
+    // Block system prompt probing and jailbreaks
+    // ========================================
+    const sessionId = req.headers.get('x-session-id') || 'default';
+    const validation = validateAndProcess(latestUserMsg, sessionId);
     
-Use the following context to answer the user's question. If the context doesn't contain relevant information, politely say so and provide a general response based on what you know.
+    if (validation.blocked) {
+      console.log(`🛡️ Guardrails blocked: ${validation.reason}`);
+      return NextResponse.json({
+        response: validation.cannedResponse,
+        source: 'guardrails',
+      });
+    }
 
-Please provide a helpful, friendly, and informative response. Be conversational and natural.`;
+    // Try LanceDB vector search first, fall back to keyword matching
+    let ragContext = "";
+    
+    try {
+      // Generate embedding for the query and search LanceDB
+      const queryEmbedding = await embed(latestUserMsg);
+      const lanceResults = await search(queryEmbedding, 5);
+      if (lanceResults.length > 0) {
+        ragContext = lanceResults
+          .map((r, idx) => `[${idx + 1}] ${r.text}`)
+          .join('\n\n');
+        console.log(`📊 LanceDB: Found ${lanceResults.length} relevant chunks`);
+      }
+    } catch (lanceError) {
+      console.log("📊 LanceDB not available, using keyword RAG");
+    }
+    
+    // Fall back to keyword matching if LanceDB empty
+    if (!ragContext) {
+      const keywordChunks = findRelevantChunks(latestUserMsg, 3);
+      ragContext = keywordChunks
+        .map((chunk, idx) => `[${idx + 1}] ${chunk.text}`)
+        .join('\n\n');
+      console.log(`📊 Keyword RAG: Found ${keywordChunks.length} relevant chunks`);
+    }
+
+    // Build the first-person persona prompt
+    const personaPrompt = buildPersonaPrompt(ragContext);
 
     // Try Gemini Live API first (PRIMARY)
     try {
@@ -63,8 +81,6 @@ Please provide a helpful, friendly, and informative response. Be conversational 
       });
     } catch (geminiError: any) {
       console.error('❌ Gemini Live API failed:', geminiError.message);
-      console.error('❌ Full error:', geminiError);
-      console.error('❌ Stack trace:', geminiError.stack);
       
       // Failover to OpenRouter (BACKUP ONLY)
       const openRouterKey = process.env.OPENROUTER_API_KEY;
@@ -72,13 +88,9 @@ Please provide a helpful, friendly, and informative response. Be conversational 
         throw new Error('Gemini Live failed and OPENROUTER_API_KEY is not configured');
       }
 
-      console.log('🟡 Switching to OpenRouter backup (DeepSeek)...');
+      console.log('🟡 Switching to OpenRouter backup...');
 
-      // Build prompt for OpenRouter
       const fullPrompt = `${personaPrompt}
-
-Here is context from my local knowledge base:
-${ragContext}
 
 USER QUESTION: ${latestUserMsg}`;
 
@@ -109,7 +121,6 @@ USER QUESTION: ${latestUserMsg}`;
 
       return NextResponse.json({
         response: responseText,
-        relevantScores: relevantChunks.map(c => c.score),
         source: 'OpenRouter Backup',
       });
     }
@@ -123,7 +134,7 @@ USER QUESTION: ${latestUserMsg}`;
   }
 }
 
-// Optional: Add a GET endpoint to check API health
+// Health check endpoint
 export async function GET() {
   const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
   const isConfigured = !!apiKey;
@@ -131,7 +142,8 @@ export async function GET() {
   return NextResponse.json({
     status: 'ok',
     apiConfigured: isConfigured,
-    ragMethod: 'keyword-matching',
+    ragMethod: 'hybrid (LanceDB + keyword fallback)',
     model: 'gemini-live-2.5-flash-preview',
+    persona: 'first-person Swadhin',
   });
 }

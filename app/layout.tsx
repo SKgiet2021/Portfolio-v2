@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Swadhin Kumar | Full-Stack Developer & AI Engineer",
-  description: "Portfolio showcasing full-stack web development, AI integration, and modern UI/UX design with interactive projects and RAG-powered chatbot.",
-  keywords: ["Full-Stack Developer", "React", "Next.js", "AI Engineer", "TypeScript", "Portfolio"],
+  description:
+    "Portfolio showcasing full-stack web development, AI integration, and modern UI/UX design with interactive projects and RAG-powered chatbot.",
+  keywords: [
+    "Full-Stack Developer",
+    "React",
+    "Next.js",
+    "AI Engineer",
+    "TypeScript",
+    "Portfolio",
+  ],
   authors: [{ name: "Swadhin Kumar" }],
   creator: "Swadhin Kumar",
 };

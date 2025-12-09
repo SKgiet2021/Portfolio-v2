@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+  
+  // Fix for vectordb and transformers native modules
+  serverExternalPackages: ['vectordb', '@xenova/transformers', 'pdf-parse'],
 
   // Image optimization
   images: {

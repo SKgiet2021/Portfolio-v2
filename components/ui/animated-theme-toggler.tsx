@@ -1,147 +1,146 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from "react"
-import { flushSync } from "react-dom"
-import { Moon, Sun } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { cn } from "@/lib/utils"
+import { useEffect, useRef, useState, useCallback } from "react";
+import { flushSync } from "react-dom";
+import { Moon, Sun } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 type AnimatedThemeTogglerProps = {
-    className?: string
-}
+  className?: string;
+};
 
-export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) => {
-    const buttonRef = useRef<HTMLButtonElement>(null)
-    const [darkMode, setDarkMode] = useState(() =>
-        typeof window !== "undefined"
-            ? document.documentElement.classList.contains("dark")
-            : false,
-    )
-    const [isFirstToggle, setIsFirstToggle] = useState(true)
+export const AnimatedThemeToggler = ({
+  className,
+}: AnimatedThemeTogglerProps) => {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [darkMode, setDarkMode] = useState(() =>
+    typeof window !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false
+  );
+  const [isFirstToggle, setIsFirstToggle] = useState(true);
 
-    // Keep internal state in sync with documentElement class changes
-    useEffect(() => {
-        const syncTheme = () =>
-            setDarkMode(document.documentElement.classList.contains("dark"))
+  // Keep internal state in sync with documentElement class changes
+  useEffect(() => {
+    const syncTheme = () =>
+      setDarkMode(document.documentElement.classList.contains("dark"));
 
-        const observer = new MutationObserver(syncTheme)
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ["class"],
-        })
-        return () => observer.disconnect()
-    }, [])
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
-    // Warm up View Transitions API (prevents first-click jitter)
-    useEffect(() => {
-        if (typeof window === "undefined") return
+  // Warm up View Transitions API (prevents first-click jitter)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-        // @ts-expect-error experimental API
-        if (!document.startViewTransition) return
+    if (!(document as any).startViewTransition) return;
 
-        const warmUp = () => {
-            // @ts-expect-error experimental API
-            document.startViewTransition(() => {
-                // No-op to pre-initialize browser machinery
-            })
-        }
+    const warmUp = () => {
+      (document as any).startViewTransition(() => {
+        // No-op to pre-initialize browser machinery
+      });
+    };
 
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(warmUp)
-        } else {
-            setTimeout(warmUp, 1000)
-        }
-    }, [])
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(warmUp);
+    } else {
+      setTimeout(warmUp, 1000);
+    }
+  }, []);
 
-    const onToggle = useCallback(async () => {
-        if (!buttonRef.current) return
+  const onToggle = useCallback(async () => {
+    if (!buttonRef.current) return;
 
-        // Guard for browsers without View Transitions API
-        // @ts-expect-error experimental API
-        if (!document.startViewTransition) {
-            // Fallback: instant toggle
-            flushSync(() => {
-                const toggled = !darkMode
-                setDarkMode(toggled)
-                document.documentElement.classList.toggle("dark", toggled)
-                localStorage.setItem("theme", toggled ? "dark" : "light")
-            })
-            return
-        }
+    // Guard for browsers without View Transitions API
+    if (!(document as any).startViewTransition) {
+      // Fallback: instant toggle
+      flushSync(() => {
+        const toggled = !darkMode;
+        setDarkMode(toggled);
+        document.documentElement.classList.toggle("dark", toggled);
+        localStorage.setItem("theme", toggled ? "dark" : "light");
+      });
+      return;
+    }
 
-        // OG pattern: await .ready inside startViewTransition
-        // @ts-expect-error experimental API
-        await document.startViewTransition(() => {
-            flushSync(() => {
-                const toggled = !darkMode
-                setDarkMode(toggled)
-                document.documentElement.classList.toggle("dark", toggled)
-                localStorage.setItem("theme", toggled ? "dark" : "light")
-            })
-        }).ready
+    // OG pattern: await .ready inside startViewTransition
+    await (document as any).startViewTransition(() => {
+      flushSync(() => {
+        const toggled = !darkMode;
+        setDarkMode(toggled);
+        document.documentElement.classList.toggle("dark", toggled);
+        localStorage.setItem("theme", toggled ? "dark" : "light");
+      });
+    }).ready;
 
-        const { left, top, width, height } = buttonRef.current.getBoundingClientRect()
-        const centerX = left + width / 2
-        const centerY = top + height / 2
-        const maxDistance = Math.hypot(
-            Math.max(centerX, window.innerWidth - centerX),
-            Math.max(centerY, window.innerHeight - centerY),
-        )
+    const { left, top, width, height } =
+      buttonRef.current.getBoundingClientRect();
+    const centerX = left + width / 2;
+    const centerY = top + height / 2;
+    const maxDistance = Math.hypot(
+      Math.max(centerX, window.innerWidth - centerX),
+      Math.max(centerY, window.innerHeight - centerY)
+    );
 
-        document.documentElement.animate(
-            {
-                clipPath: [
-                    `circle(0px at ${centerX}px ${centerY}px)`,
-                    `circle(${maxDistance}px at ${centerX}px ${centerY}px)`,
-                ],
-            },
-            {
-                duration: isFirstToggle ? 900 : 700, // Slower first time masks jitter
-                easing: "ease-in-out",
-                pseudoElement: "::view-transition-new(root)",
-            },
-        )
+    document.documentElement.animate(
+      {
+        clipPath: [
+          `circle(0px at ${centerX}px ${centerY}px)`,
+          `circle(${maxDistance}px at ${centerX}px ${centerY}px)`,
+        ],
+      },
+      {
+        duration: isFirstToggle ? 900 : 700, // Slower first time masks jitter
+        easing: "ease-in-out",
+        pseudoElement: "::view-transition-new(root)",
+      }
+    );
 
-        // Mark as no longer first toggle
-        setIsFirstToggle(false)
-    }, [darkMode, isFirstToggle])
+    // Mark as no longer first toggle
+    setIsFirstToggle(false);
+  }, [darkMode, isFirstToggle]);
 
-    return (
-        <button
-            ref={buttonRef}
-            onClick={onToggle}
-            aria-label="Switch theme"
-            type="button"
-            className={cn(
-                "flex items-center justify-center p-2 rounded-full outline-none focus:outline-none active:outline-none focus:ring-0 cursor-pointer",
-                className,
-            )}
-        >
-            <AnimatePresence mode="wait" initial={false}>
-                {darkMode ? (
-                    <motion.span
-                        key="sun-icon"
-                        initial={{ opacity: 0, scale: 0.55, rotate: 25 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.33 }}
-                        className="text-white"
-                    >
-                        <Sun />
-                    </motion.span>
-                ) : (
-                    <motion.span
-                        key="moon-icon"
-                        initial={{ opacity: 0, scale: 0.55, rotate: -25 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.33 }}
-                        className="text-black"
-                    >
-                        <Moon />
-                    </motion.span>
-                )}
-            </AnimatePresence>
-        </button>
-    )
-}
+  return (
+    <button
+      ref={buttonRef}
+      onClick={onToggle}
+      aria-label="Switch theme"
+      type="button"
+      className={cn(
+        "flex items-center justify-center p-2 rounded-full outline-none focus:outline-none active:outline-none focus:ring-0 cursor-pointer",
+        className
+      )}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {darkMode ? (
+          <motion.span
+            key="sun-icon"
+            initial={{ opacity: 0, scale: 0.55, rotate: 25 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.33 }}
+            className="text-white"
+          >
+            <Sun />
+          </motion.span>
+        ) : (
+          <motion.span
+            key="moon-icon"
+            initial={{ opacity: 0, scale: 0.55, rotate: -25 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.33 }}
+            className="text-black"
+          >
+            <Moon />
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </button>
+  );
+};

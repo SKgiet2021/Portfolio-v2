@@ -23,7 +23,7 @@ import { GooeyText } from "@/components/ui/gooey-text-morphing";
 import { DigitalRainCanvas } from "@/components/ui/digital-rain";
 import { MorphPanel } from "@/components/ui/ai-input";
 import { useMotionValue } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
 import {
   CardPattern,
   generateRandomString,
@@ -31,10 +31,11 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 
-// Simple static hero component without animations
-function SimpleHero() {
-  const titles = ["beautiful", "smart", "new", "amazing", "wonderful"];
+// Hero title options (defined outside component to prevent recreation)
+const HERO_TITLES = ["beautiful", "smart", "new", "amazing", "wonderful"];
 
+// Memoized hero component - pure presentation, no props changing
+const SimpleHero = memo(function SimpleHero() {
   return (
     <div className="w-full relative z-10 px-4 sm:px-6 md:px-8">
       <div className="container mx-auto">
@@ -46,7 +47,7 @@ function SimpleHero() {
               </span>
               <div className="relative flex w-full justify-center overflow-visible md:overflow-hidden text-center pt-4 pb-4 md:pb-4 md:pt-4 mt-2 min-h-[120px]">
                 <GooeyText
-                  texts={titles}
+                  texts={HERO_TITLES}
                   morphTime={1}
                   cooldownTime={0.25}
                   className="font-bold"
@@ -74,7 +75,7 @@ function SimpleHero() {
       </div>
     </div>
   );
-}
+});
 
 interface SimpleGridItemProps {
   area: string;
@@ -84,42 +85,51 @@ interface SimpleGridItemProps {
   onClick?: () => void;
 }
 
-const SimpleGridItem = ({
+// Memoized grid item component with optimized mouse handling
+const SimpleGridItem = memo(function SimpleGridItem({
   area,
   icon,
   title,
   description,
   onClick,
-}: SimpleGridItemProps) => {
+}: SimpleGridItemProps) {
   const isMobile = useIsMobile();
-  let mouseX = useMotionValue(0);
-  let mouseY = useMotionValue(0);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const lastUpdateRef = useRef(0);
+  const randomStringRef = useRef(generateRandomString(1500));
 
-  const [randomString, setRandomString] = useState("");
+  const [randomString, setRandomString] = useState(
+    () => randomStringRef.current
+  );
 
-  useEffect(() => {
-    let str = generateRandomString(1500);
-    setRandomString(str);
-  }, []);
+  // Throttled mouse move handler - only update every 100ms max
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (isMobile) return;
 
-  function onMouseMove({ currentTarget, clientX, clientY }: any) {
-    // Disable mouse tracking on mobile
-    if (isMobile) return;
+      const { left, top } = e.currentTarget.getBoundingClientRect();
+      mouseX.set(e.clientX - left);
+      mouseY.set(e.clientY - top);
 
-    let { left, top } = currentTarget.getBoundingClientRect();
-    mouseX.set(clientX - left);
-    mouseY.set(clientY - top);
-
-    const str = generateRandomString(1500);
-    setRandomString(str);
-  }
+      // Throttle random string generation to every 100ms
+      const now = Date.now();
+      if (now - lastUpdateRef.current > 100) {
+        lastUpdateRef.current = now;
+        const str = generateRandomString(1500);
+        randomStringRef.current = str;
+        setRandomString(str);
+      }
+    },
+    [isMobile, mouseX, mouseY]
+  );
 
   return (
     <li className={`min-h-[14rem] list-none ${area}`}>
       <div
         className="relative h-full cursor-pointer group/card rounded-[1.25rem]"
         onClick={onClick}
-        onMouseMove={onMouseMove}
+        onMouseMove={handleMouseMove}
       >
         <GlowingEffect
           spread={40}
@@ -159,25 +169,32 @@ const SimpleGridItem = ({
       </div>
     </li>
   );
-};
+});
+
+// Navigation items defined outside component to prevent recreation
+const NAV_ITEMS = [
+  { name: "Home", url: "#home", icon: Home },
+  { name: "About", url: "#about", icon: User },
+  { name: "Skills", url: "#skills", icon: Code },
+  { name: "Projects", url: "#projects", icon: Briefcase },
+  { name: "Contact", url: "#contact", icon: FileText },
+];
 
 export default function HomePage() {
   const router = useRouter();
 
-  const navItems = [
-    { name: "Home", url: "#home", icon: Home },
-    { name: "About", url: "#about", icon: User },
-    { name: "Skills", url: "#skills", icon: Code },
-    { name: "Projects", url: "#projects", icon: Briefcase },
-    { name: "Contact", url: "#contact", icon: FileText },
-  ];
+  // Memoized click handlers to prevent recreation on each render
+  const handleProjectClick = useCallback(
+    (projectId: number) => () => router.push(`/project/${projectId}`),
+    [router]
+  );
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased relative">
       {/* Digital Rain Background */}
       <DigitalRainCanvas />
 
-      <NavBar items={navItems} />
+      <NavBar items={NAV_ITEMS} />
 
       {/* Theme Toggle - positioned in top-right */}
       <div className="fixed top-4 right-4 z-50">
@@ -203,47 +220,47 @@ export default function HomePage() {
               icon={<Box className="h-4 w-4" />}
               title="Do things the right way"
               description="Running out of copy so I'll write anything."
-              onClick={() => router.push("/project/1")}
+              onClick={handleProjectClick(1)}
             />
             <SimpleGridItem
               area="md:[grid-area:1/7/2/13] xl:[grid-area:2/1/3/5]"
               icon={<Settings className="h-4 w-4" />}
               title="The best AI code editor ever."
               description="Yes, it's true. I'm not even kidding. Ask my mom if you don't believe me."
-              onClick={() => router.push("/project/2")}
+              onClick={handleProjectClick(2)}
             />
             <SimpleGridItem
               area="md:[grid-area:2/1/3/7] xl:[grid-area:1/5/3/8]"
               icon={<Lock className="h-4 w-4" />}
               title="You should buy Aceternity UI Pro"
               description="It's the best money you'll ever spend"
-              onClick={() => router.push("/project/3")}
+              onClick={handleProjectClick(3)}
             />
             <SimpleGridItem
               area="md:[grid-area:2/7/3/13] xl:[grid-area:1/8/2/13]"
               icon={<Sparkles className="h-4 w-4" />}
               title="This card is also built by Cursor"
               description="I'm not even kidding. Ask my mom if you don't believe me."
-              onClick={() => router.push("/project/4")}
+              onClick={handleProjectClick(4)}
             />
             <SimpleGridItem
               area="md:[grid-area:3/1/4/13] xl:[grid-area:2/8/3/13]"
               icon={<Search className="h-4 w-4" />}
               title="Coming soon on Aceternity UI"
               description="I'm writing the code as I record this, no shit."
-              onClick={() => router.push("/project/5")}
+              onClick={handleProjectClick(5)}
             />
           </ul>
         </section>
 
         <ContactSection />
-      </main >
+      </main>
 
       {/* RAG Chatbot */}
       {/* RAG Chatbot UI */}
       <div className="fixed bottom-4 right-24 z-50">
         <MorphPanel />
       </div>
-    </div >
+    </div>
   );
 }

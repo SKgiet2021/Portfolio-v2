@@ -1,0 +1,122 @@
+{
+  "name": "Swadhin Kumar",
+  "contact": {
+    "phone": "+91 9040444559",
+    "email": "swadhinkumar2004@gmail.com",
+    "linkedin": "linkedin.com/in/swadhin-kumar-400aa71a0",
+    "github": "github.com/swadhinkumar2004",
+    "location": "Puri, Odisha, India"
+  },
+  "headline": "Fresh B.Tech Graduate | UI/UX Designer | Vibe Coder | Data Science",
+  "about": "I'm Swadhin, a fresh B.Tech CSE (Data Science) graduate from GIET University, class of 2025. I love building beautiful interfaces and writing clean code. My primary focus is UI/UX design and what I call 'vibe coding' - creating experiences that just feel right. With a Data Science background, I bring analytical thinking to design decisions.",
+  "education": [
+    {
+      "degree": "B.Tech in Computer Science (Data Science)",
+      "institution": "GIET University, Gunupur",
+      "period": "Jul 2022 – Jun 2025",
+      "cgpa": "6.98/10"
+    },
+    {
+      "degree": "Diploma in Mechatronics",
+      "institution": "CTTC, Bhubaneswar",
+      "year": "2022",
+      "percentage": "75.6%"
+    },
+    {
+      "degree": "Class 12 (CBSE)",
+      "institution": "DAV Public School, Puri",
+      "year": "2019",
+      "percentage": "83.6%"
+    }
+  ],
+  "primaryFocus": ["UI/UX Design", "Vibe Coding", "Modern Web Development"],
+  "skills": {
+    "languages": ["Python", "Java", "C#", "SQL", "JavaScript", "TypeScript", "HTML", "CSS"],
+    "frameworks": ["React.js", "Next.js", "Django", "Flask", "Node.js", "ASP.NET", "FastAPI", "Bootstrap"],
+    "design": ["Figma", "UI/UX Design", "Responsive Design", "Modern Aesthetics"],
+    "dataScience": ["Pandas", "Scikit-learn", "TensorFlow", "OpenCV", "ML", "Data Visualization", "Forecasting"],
+    "tools": ["VS Code", "Git", "Android Studio", "Jira", "Power BI", "Streamlit"],
+    "databases": ["MySQL", "PostgreSQL", "MongoDB", "SQLite"],
+    "cloud": ["Azure basics", "Cloud Computing"]
+  },
+  "experience": [
+    {
+      "role": "Project Intern",
+      "company": "Wipro TalentNext",
+      "period": "2024",
+      "type": "Remote",
+      "highlights": [
+        "Built full-stack web apps using .NET and SQL",
+        "Created dynamic UIs and scalable backends",
+        "Integrated REST APIs in agile teams"
+      ]
+    },
+    {
+      "role": ".NET Developer Intern",
+      "company": "Salesforce",
+      "period": "May 2024 – Sep 2025",
+      "type": "Remote",
+      "highlights": [
+        "CRM fundamentals via Trailhead",
+        "Workflow automation and process solutions"
+      ]
+    },
+    {
+      "role": "Data Analytics Intern",
+      "company": "Logozon Edutech Pvt. Ltd",
+      "period": "May 2023 – Jun 2023",
+      "type": "Remote",
+      "highlights": [
+        "Built Power BI dashboards",
+        "Data cleansing and visualization"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Rainfall Prediction using Satellite Data",
+      "tech": ["Python", "TensorFlow", "OpenCV"],
+      "year": 2025,
+      "description": "ML-based forecast model using satellite imagery for early warning systems",
+      "repo": "github.com/Octavian-ai/Rainfall-Prediction"
+    },
+    {
+      "name": "Loan Repayment Risk Platform",
+      "tech": ["Python", "Streamlit", "PostgreSQL"],
+      "year": 2025,
+      "description": "Interactive ML dashboards for financial risk analysis",
+      "repo": "github.com/Vatshayan/Loan-Repayment-ML"
+    },
+    {
+      "name": "Deskbot - AI Desktop Assistant",
+      "tech": ["Python", "Tkinter", "API Integration"],
+      "year": 2024,
+      "description": "Cross-platform productivity assistant with OpenAI integration",
+      "repo": "github.com/pranavsindura/Deskbot"
+    },
+    {
+      "name": "Website Vulnerability Analyzer",
+      "tech": ["Python", "Flask", "Bootstrap"],
+      "year": 2023,
+      "description": "Security tool for scanning web vulnerabilities (XSS, SQLi)",
+      "repo": "github.com/MdAmiruddin/Website-Vulnerability-Analyzer"
+    }
+  ],
+  "certifications": [
+    "HackerRank Python (Basic)",
+    "Kaggle Python (Basic)",
+    "Wipro TalentNext DotNet Full Stack",
+    "NPTEL - Joy of Computing Using Python",
+    "NPTEL - Programming in Java",
+    "Microsoft Cloud Fundamentals",
+    "Google Data Analytics (Coursera)"
+  ],
+  "achievements": [
+    "Best Project award in college miniproject expo (2023)",
+    "Top 5% performer in Kaggle Python challenge",
+    "Coding Club member organizing workshops (2022-2025)",
+    "College Hackathon Finalist (2024)"
+  ],
+  "languages": ["English (fluent)", "Hindi (native)"],
+  "interests": ["UI/UX Design", "Vibe Coding", "Data Science", "Cloud Solutions", "Automation", "Latest Tech Trends"]
+}
