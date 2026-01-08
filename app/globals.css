@@ -27,8 +27,7 @@
   --glass-bg-strong: rgba(255, 255, 255, 0.08);
   --glass-border: rgba(255, 255, 255, 0.3);
   --glass-inner-highlight: rgba(255, 255, 255, 0.4);
-  --glass-shadow:
-    0 24px 55px rgba(15, 23, 42, 0.35),
+  --glass-shadow: 0 24px 55px rgba(15, 23, 42, 0.35),
     0 0 0 1px rgba(255, 255, 255, 0.12);
   --glass-top-glow: rgba(255, 255, 255, 0.85);
   --glass-fringe-blue: rgba(0, 122, 255, 0.55);
@@ -85,8 +84,7 @@
   --glass-bg-strong: rgba(16, 20, 33, 0.4);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-inner-highlight: rgba(255, 255, 255, 0.2);
-  --glass-shadow:
-    0 28px 65px rgba(0, 0, 0, 0.78),
+  --glass-shadow: 0 28px 65px rgba(0, 0, 0, 0.78),
     0 0 0 1px rgba(255, 255, 255, 0.08);
   --glass-top-glow: rgba(255, 255, 255, 0.55);
   --glass-fringe-blue: rgba(64, 156, 255, 0.65);
@@ -124,4 +122,26 @@ body {
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Hide native cursor globally for smooth cursor effect (desktop only) */
+@media (hover: hover) and (pointer: fine) {
+  html,
+  body {
+    cursor: none !important;
+  }
+  
+  *,
+  *::before,
+  *::after,
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [onclick],
+  [tabindex] {
+    cursor: none !important;
+  }
 }

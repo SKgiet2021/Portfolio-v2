@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/evervault-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { SmoothCursor } from "@/components/ui/smooth-cursor";
 
 // Hero title options (defined outside component to prevent recreation)
 const HERO_TITLES = ["beautiful", "smart", "new", "amazing", "wonderful"];
@@ -43,11 +44,16 @@ const SimpleHero = memo(function SimpleHero() {
           <div className="flex gap-4 flex-col items-center">
             <h1 className="text-5xl md:text-7xl max-w-2xl tracking-tighter text-center font-regular">
               <span className="text-blue-600 dark:text-blue-400">
-                This is something
+                Crafting Intelligence
               </span>
-              <div className="relative flex w-full justify-center overflow-visible md:overflow-hidden text-center pt-4 pb-4 md:pb-4 md:pt-4 mt-2 min-h-[120px]">
+              <div className="relative flex w-full justify-center overflow-visible text-center pt-2 pb-2 mt-7 min-h-[100px] whitespace-nowrap">
                 <GooeyText
-                  texts={HERO_TITLES}
+                  texts={[
+                    "with Style",
+                    "with Data",
+                    "with Design",
+                    "with Logic",
+                  ]}
                   morphTime={1}
                   cooldownTime={0.25}
                   className="font-bold"
@@ -57,19 +63,11 @@ const SimpleHero = memo(function SimpleHero() {
             </h1>
 
             <p className="text-lg md:text-xl leading-relaxed tracking-tight text-muted-foreground max-w-2xl text-center relative z-10 px-4">
-              Managing a small business today is already tough. Avoid further
-              complications by ditching outdated, tedious trade methods. Our
-              goal is to streamline SMB trade, making it easier and faster than
-              ever.
+              I bridge the gap between complex algorithms and beautiful
+              interfaces. As a <strong>Data Science</strong> student passionate
+              about <strong>UI/UX</strong>, I build smart applications that feel
+              alive and look exceptional.
             </p>
-          </div>
-          <div className="flex flex-row gap-4">
-            <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              Get in touch
-            </button>
-            <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80">
-              View my work
-            </button>
           </div>
         </div>
       </div>
@@ -182,6 +180,7 @@ const NAV_ITEMS = [
 
 export default function HomePage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   // Memoized click handlers to prevent recreation on each render
   const handleProjectClick = useCallback(
@@ -191,6 +190,17 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased relative">
+      {/* Smooth Cursor - disabled on mobile */}
+      <SmoothCursor
+        color="currentColor"
+        size={20}
+        glowEffect
+        scaleOnClick
+        rotateOnMove
+        hideOnLeave
+        disabled={isMobile}
+      />
+
       {/* Digital Rain Background */}
       <DigitalRainCanvas />
 
@@ -218,37 +228,39 @@ export default function HomePage() {
             <SimpleGridItem
               area="md:[grid-area:1/1/2/7] xl:[grid-area:1/1/2/5]"
               icon={<Box className="h-4 w-4" />}
-              title="Do things the right way"
-              description="Running out of copy so I'll write anything."
+              title="GeoSpatial Forecaster"
+              description="Satellite imagery analysis using TensorFlow for precise rainfall prediction."
               onClick={handleProjectClick(1)}
             />
             <SimpleGridItem
               area="md:[grid-area:1/7/2/13] xl:[grid-area:2/1/3/5]"
               icon={<Settings className="h-4 w-4" />}
-              title="The best AI code editor ever."
-              description="Yes, it's true. I'm not even kidding. Ask my mom if you don't believe me."
+              title="Credit Risk Intelligence"
+              description="Predictive financial modeling dashboard for assessing loan repayment probabilities."
               onClick={handleProjectClick(2)}
             />
             <SimpleGridItem
               area="md:[grid-area:2/1/3/7] xl:[grid-area:1/5/3/8]"
               icon={<Lock className="h-4 w-4" />}
-              title="You should buy Aceternity UI Pro"
-              description="It's the best money you'll ever spend"
+              title="Desktop Automation Core"
+              description="Python-based intelligent assistant for cross-platform workflow automation."
               onClick={handleProjectClick(3)}
             />
             <SimpleGridItem
               area="md:[grid-area:2/7/3/13] xl:[grid-area:1/8/2/13]"
               icon={<Sparkles className="h-4 w-4" />}
-              title="This card is also built by Cursor"
-              description="I'm not even kidding. Ask my mom if you don't believe me."
+              title="Web Security Scanner"
+              description="Automated vulnerability assessment tool for XSS and SQL injection detection."
               onClick={handleProjectClick(4)}
             />
             <SimpleGridItem
               area="md:[grid-area:3/1/4/13] xl:[grid-area:2/8/3/13]"
               icon={<Search className="h-4 w-4" />}
-              title="Coming soon on Aceternity UI"
-              description="I'm writing the code as I record this, no shit."
-              onClick={handleProjectClick(5)}
+              title="RAG AI Architecture"
+              description="This Portfolio! A Next.js 15 system with Neural Search (LanceDB), Llama 3.3 integration, and modular provider switching."
+              onClick={() =>
+                window.open("https://github.com/swadhinkumar2004", "_blank")
+              }
             />
           </ul>
         </section>

@@ -1,18 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findRelevantChunks } from '@/lib/rag-simple';
-import { streamLiveReply } from '@/lib/geminiLive';
 import { buildPersonaPrompt } from '@/lib/persona';
 import { search } from '@/lib/lance-store';
 import { embed } from '@/lib/embeddings';
 import { validateAndProcess } from '@/lib/guardrails';
 
+// Modular Provider Config
+const CHAT_PROVIDER = process.env.CHAT_PROVIDER || 'OPENROUTER'; 
+
+// Simple in-memory rate limiter (for demo/portfolio scale)
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 5;
+const rateLimitMap = new Map<string, { count: number; expires: number }>();
+
 export async function POST(req: NextRequest) {
   try {
+    // 0. Security: Rate Limiting
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const now = Date.now();
+    
+    // Clean up expired entries
+    if (rateLimitMap.has(ip) && rateLimitMap.get(ip)!.expires < now) {
+      rateLimitMap.delete(ip);
+    }
+
+    const record = rateLimitMap.get(ip) || { count: 0, expires: now + RATE_LIMIT_WINDOW };
+    
+    if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again in a minute." },
+        { status: 429 }
+      );
+    }
+
+    record.count += 1;
+    rateLimitMap.set(ip, record);
+
     const { message, messages } = await req.json();
 
-    // Support both single message and messages array (chat history)
+    // 1. History
     let history: { role: "user" | "model"; content: string }[] = [];
-    
     if (messages && Array.isArray(messages)) {
       history = messages.map((m: any) => ({
         role: m.role === "assistant" ? "model" : m.role,
@@ -23,78 +50,41 @@ export async function POST(req: NextRequest) {
     } else {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
-
-    // Extract the latest user message for RAG context
     const latestUserMsg = history[history.length - 1].content;
 
-    // ========================================
-    // LAYER 1: GUARDRAILS - Pre-processing
-    // Block system prompt probing and jailbreaks
-    // ========================================
+    // 2. Guardrails
     const sessionId = req.headers.get('x-session-id') || 'default';
     const validation = validateAndProcess(latestUserMsg, sessionId);
-    
     if (validation.blocked) {
-      console.log(`🛡️ Guardrails blocked: ${validation.reason}`);
-      return NextResponse.json({
-        response: validation.cannedResponse,
-        source: 'guardrails',
-      });
+      return NextResponse.json({ response: validation.cannedResponse, source: 'guardrails' });
     }
 
-    // Try LanceDB vector search first, fall back to keyword matching
+    // 3. RAG
     let ragContext = "";
-    
     try {
-      // Generate embedding for the query and search LanceDB
       const queryEmbedding = await embed(latestUserMsg);
       const lanceResults = await search(queryEmbedding, 5);
       if (lanceResults.length > 0) {
-        ragContext = lanceResults
-          .map((r, idx) => `[${idx + 1}] ${r.text}`)
-          .join('\n\n');
-        console.log(`📊 LanceDB: Found ${lanceResults.length} relevant chunks`);
+        ragContext = lanceResults.map((r, idx) => `[${idx + 1}] ${r.text}`).join('\n\n');
       }
-    } catch (lanceError) {
-      console.log("📊 LanceDB not available, using keyword RAG");
-    }
-    
-    // Fall back to keyword matching if LanceDB empty
+    } catch (e) { console.log("LanceDB skipped"); }
+
     if (!ragContext) {
       const keywordChunks = findRelevantChunks(latestUserMsg, 3);
-      ragContext = keywordChunks
-        .map((chunk, idx) => `[${idx + 1}] ${chunk.text}`)
-        .join('\n\n');
-      console.log(`📊 Keyword RAG: Found ${keywordChunks.length} relevant chunks`);
+      ragContext = keywordChunks.map((chunk, idx) => `[${idx + 1}] ${chunk.text}`).join('\n\n');
     }
 
-    // Build the first-person persona prompt
+    // 4. Persona
     const personaPrompt = buildPersonaPrompt(ragContext);
-
-    // Try Gemini Live API first (PRIMARY)
-    try {
-      console.log("🔴 Using Gemini Live model: gemini-live-2.5-flash-preview");
-      const stream = await streamLiveReply(history, personaPrompt, ragContext);
-      
-      return new Response(stream, {
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
-    } catch (geminiError: any) {
-      console.error('❌ Gemini Live API failed:', geminiError.message);
-      
-      // Failover to OpenRouter (BACKUP ONLY)
+    
+    // 5. Execution (OpenRouter)
+    if (CHAT_PROVIDER === 'OPENROUTER') {
       const openRouterKey = process.env.OPENROUTER_API_KEY;
-      if (!openRouterKey) {
-        throw new Error('Gemini Live failed and OPENROUTER_API_KEY is not configured');
-      }
+      if (!openRouterKey) throw new Error('OPENROUTER_API_KEY missing');
 
-      console.log('🟡 Switching to OpenRouter backup...');
+      console.log('🤖 Using OpenRouter: meta-llama/llama-3.3-70b-instruct:free');
 
-      const fullPrompt = `${personaPrompt}
-
-USER QUESTION: ${latestUserMsg}`;
-
-      const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${openRouterKey}`,
@@ -106,44 +96,31 @@ USER QUESTION: ${latestUserMsg}`;
           model: 'meta-llama/llama-3.3-70b-instruct:free',
           messages: [
             { role: 'system', content: personaPrompt },
-            { role: 'user', content: fullPrompt }
-          ],
-        }),
+            ...history.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content }))
+          ]
+        })
       });
 
-      if (!openRouterResponse.ok) {
-        const errorData = await openRouterResponse.json();
-        throw new Error(`OpenRouter failed: ${errorData.error?.message || openRouterResponse.statusText}`);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(`OpenRouter failed: ${err.error?.message || response.statusText}`);
       }
-
-      const data = await openRouterResponse.json();
-      const responseText = data.choices[0]?.message?.content || 'No response from OpenRouter';
-
+      
+      const data = await response.json();
       return NextResponse.json({
-        response: responseText,
-        source: 'OpenRouter Backup',
+        response: data.choices[0]?.message?.content || "No response",
+        source: 'OpenRouter (Llama 3.3)'
       });
     }
 
+    throw new Error(`Provider ${CHAT_PROVIDER} not implemented`);
+
   } catch (error: any) {
-    console.error('Chat API error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Chat API Error:', error);
+    return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
   }
 }
 
-// Health check endpoint
 export async function GET() {
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
-  const isConfigured = !!apiKey;
-
-  return NextResponse.json({
-    status: 'ok',
-    apiConfigured: isConfigured,
-    ragMethod: 'hybrid (LanceDB + keyword fallback)',
-    model: 'gemini-live-2.5-flash-preview',
-    persona: 'first-person Swadhin',
-  });
+  return NextResponse.json({ status: 'ok', provider: CHAT_PROVIDER });
 }
