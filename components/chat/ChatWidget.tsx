@@ -162,7 +162,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isOpen, onClose }) => {
             ${isDarkMode ? "dark" : ""}
             ${
               isMobile
-                ? "inset-0 w-full h-full rounded-none"
+                ? "inset-0 w-full h-[100dvh] max-h-[100dvh] rounded-none"
                 : "bottom-6 right-6 w-[380px] h-[600px] rounded-[32px]"
             }
           `}
