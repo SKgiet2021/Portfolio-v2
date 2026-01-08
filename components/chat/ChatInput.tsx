@@ -14,7 +14,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Auto-focus when enabled
   useEffect(() => {
     if (!disabled && inputRef.current) {
       setTimeout(() => {
@@ -22,6 +24,25 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       }, 100);
     }
   }, [disabled]);
+
+  // Scroll input into view when keyboard opens on mobile
+  useEffect(() => {
+    const handleFocus = () => {
+      // Small delay to let keyboard animation start
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }, 300);
+    };
+
+    const inputElement = inputRef.current;
+    if (inputElement) {
+      inputElement.addEventListener("focus", handleFocus);
+      return () => inputElement.removeEventListener("focus", handleFocus);
+    }
+  }, []);
 
   const handleSend = () => {
     if (input.trim() && !disabled) {
@@ -40,7 +61,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const maxLength = 500;
 
   return (
-    <div className="px-5 pb-4 pt-3 bg-transparent border-t-0 flex-shrink-0">
+    <div
+      ref={containerRef}
+      className="px-5 pb-4 pt-3 bg-transparent border-t-0 flex-shrink-0"
+    >
       <div className="relative">
         <input
           ref={inputRef}
