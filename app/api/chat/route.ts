@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllKnowledge } from '@/lib/rag-simple';
+import { findRelevantChunks } from '@/lib/rag-simple';
 import { buildPersonaPrompt } from '@/lib/persona';
+import { search } from '@/lib/lance-store';
+import { embed } from '@/lib/embeddings';
 import { validateAndProcess } from '@/lib/guardrails';
 
 // Modular Provider Config
@@ -57,10 +59,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ response: validation.cannedResponse, source: 'guardrails' });
     }
 
-    // 3. RAG (Full Context Mode)
-    // We skip vector search to avoid AVX requirements on the server.
-    // We simply load the entire portfolio context into the prompt.
-    const ragContext = getAllKnowledge();
+    // 3. RAG
+    let ragContext = "";
+    try {
+      const queryEmbedding = await embed(latestUserMsg);
+      const lanceResults = await search(queryEmbedding, 5);
+      if (lanceResults.length > 0) {
+        ragContext = lanceResults.map((r, idx) => `[${idx + 1}] ${r.text}`).join('\n\n');
+      }
+    } catch (e) { console.log("LanceDB skipped"); }
+
+    if (!ragContext) {
+      const keywordChunks = findRelevantChunks(latestUserMsg, 3);
+      ragContext = keywordChunks.map((chunk, idx) => `[${idx + 1}] ${chunk.text}`).join('\n\n');
+    }
 
     // 4. Persona
     const personaPrompt = buildPersonaPrompt(ragContext);
