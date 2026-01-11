@@ -139,3 +139,14 @@ export function reloadKnowledgeBase() {
   knowledgeChunks = null;
   console.log('🔄 Knowledge base cleared, will reload on next query');
 }
+
+/**
+ * Get ALL knowledge chunks as a single string (for Full Context mode)
+ */
+export function getAllKnowledge(): string {
+  if (!knowledgeChunks) {
+    knowledgeChunks = prepareKnowledgeChunks();
+    console.log(`📚 Knowledge base initialized with ${knowledgeChunks.length} chunks`);
+  }
+  return knowledgeChunks.join('\n\n');
+}

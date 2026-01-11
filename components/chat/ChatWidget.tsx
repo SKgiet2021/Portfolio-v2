@@ -43,39 +43,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isOpen, onClose }) => {
     return () => observer.disconnect();
   }, []);
 
-  // Load chat history from localStorage
+  // Initial Welcome Message (No Persistence)
   useEffect(() => {
-    const savedMessages = localStorage.getItem("chat_history");
-    if (savedMessages) {
-      try {
-        const parsed = JSON.parse(savedMessages);
-        const hydratedMessages = parsed.map((m: any) => ({
-          ...m,
-          timestamp: new Date(m.timestamp),
-        }));
-        setMessages(hydratedMessages);
-      } catch (e) {
-        console.error("Failed to parse chat history", e);
-      }
-    } else {
-      // Welcome message
-      const welcomeMsg: ChatMessage = {
-        id: "welcome-1",
-        role: "assistant",
-        content:
-          "Hi there! 👋 I'm Swadhin's AI assistant. I can answer questions about my projects, skills, and experience. What would you like to know?",
-        timestamp: new Date(),
-      };
-      setMessages([welcomeMsg]);
-    }
+    const welcomeMsg: ChatMessage = {
+      id: "welcome-1",
+      role: "assistant",
+      content:
+        "Hi there! 👋 I'm Swadhin's AI assistant (powered by Llama 3.3). I can answer questions about my projects, skills, and experience. What would you like to know?",
+      timestamp: new Date(),
+    };
+    setMessages([welcomeMsg]);
   }, []);
-
-  // Save messages to localStorage
-  useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem("chat_history", JSON.stringify(messages));
-    }
-  }, [messages]);
 
   // Detect mobile
   useEffect(() => {
